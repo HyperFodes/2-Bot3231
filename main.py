@@ -4,15 +4,15 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, LabeledPri
 from flask import Flask, request
 
 # ==========================================
-# 1. CONFIGURAÇÕES INICIAIS
+# 1. CONFIGURAÇÕES INICIAIS (100% RESOLVIDAS)
 # ==========================================
 TOKEN_BOT = "8713000127:AAGGTcj0wuKqqPzEhfhrWQuDTRWb8Dx3nDw"
 SEU_ID_TELEGRAM = 7665685378
 ID_GRUPO_VIP = -1004452403722
 
-# File IDs a serem extraídos pelo NOVO bot 
-LINK_BANNER_BOAS_VINDAS = "COLE_O_NOVO_ID_DO_BANNER_AQUI"
-LINK_QRCODE_PIX = "COLE_O_NOVO_ID_DO_QR_AQUI"
+# File IDs extraídos automaticamente dos seus prints enviados
+LINK_BANNER_BOAS_VINDAS = "AgACAgEAAxkBAAFOValqS0Lwkdjhe4pE9eioLo3Ix9rzdQAC8wtrG1MIWEbYAYELiw9weQEAAwIAA3kAAzYE"
+LINK_QRCODE_PIX = "AgACAgEAAxkBAAFOVbBqS0PSwscNNP18p3ba8LnbAc1gkQAC4QtrG22QWEY81CLHVd7bzAEAAtwIAA3gAAzWE"
 
 # Suas carteiras oficiais configuradas
 CARTEIRA_BTC = "bc1qv0vt52xa356n5sfz6ayq9enfr77teemr4htqtf"
@@ -23,14 +23,14 @@ CARTEIRA_USDT = "0x1e75616b576d7f66f0cd8176ee2f70bef1fe8ddb"
 bot = telebot.TeleBot(TOKEN_BOT, threaded=False)
 app = Flask(__name__)
 
-# Dicionário para rastrear quem está comprando o quê (Importante para receber o comprovante)
+# Dicionário para rastrear quem está comprando o quê
 usuarios_comprando = {}
 
 # ==========================================
 # 2. COMANDOS DO BOT
 # ==========================================
 
-# --- MENSAGEM DE BOAS VINDAS COM BANNER BILÍNGUE (/start) ---
+# --- MENSAGEM DE BOAS VINDAS COM BANNER (/start) ---
 @bot.message_handler(commands=['start'])
 def enviar_boas_vindas(message):
     try:
@@ -55,7 +55,7 @@ def enviar_boas_vindas(message):
         print("[BOT] ✅ Foto enviada com sucesso!", flush=True)
         
     except Exception as e:
-        print(f"[ERRO NO START] ❌ Falha ao enviar foto. Enviando texto. Erro: {e}", flush=True)
+        print(f"[ERRO NO START] ❌ Falha ao enviar foto. Enviando apenas o texto. Erro: {e}", flush=True)
         bot.send_message(message.chat.id, texto, reply_markup=markup, parse_mode="Markdown")
 
 
@@ -107,11 +107,98 @@ def escutar_botoes(call):
         bot.send_message(chat_id, texto_crypto, parse_mode="Markdown")
 
     elif call.data.startswith("aprovar_"):
-        bot.answer_callback_query(call.id) # Evita spam de repetição do clique
+        bot.answer_callback_query(call.id)
         id_cliente = call.data.split("_")[1]
         try:
             link_grupo = bot.create_chat_invite_link(ID_GRUPO_VIP, member_limit=1)
             bot.send_message(id_cliente, f"✅ Seu pagamento foi aprovado! / Your payment has been approved!\n\nClique no link abaixo para entrar no grupo VIP permanentemente:\nClick the link below to join the VIP group permanently:\n\n{link_grupo.invite_link}")
-            bot.edit_message_caption("✅ Cliente aprovado e link permanente enviado!", chat_id=chat_id, message_id=call.message.message_id)
+            
+            # Atualiza a interface do Admin com proteção contra erros de texto/legenda
+            try:
+                bot.edit_message_caption(caption="✅ Cliente aprovado e link permanente enviado com sucesso!", chat_id=chat_id, message_id=call.message.message_id, reply_markup=None)
+            except Exception:
+                bot.edit_message_reply_markup(chat_id=chat_id, message_id=call.message.message_id, reply_markup=None)
+                bot.send_message(chat_id, "✅ Cliente aprovado!")
+                
         except Exception as e:
-            bot.send_message(chat_id
+            bot.send_message(chat_id, f"Erro ao gerar link. Verifique se o bot é admin do grupo. Erro: {e}")
+
+    elif call.data.startswith("recusar_"):
+        bot.answer_callback_query(call.id)
+        id_cliente = call.data.split("_")[1]
+        try:
+            bot.send_message(id_cliente, "❌ Pagamento recusado / Payment declined.\nSe achar que foi um erro, entre em contato com o suporte: @HardHandsG")
+            
+            # Atualiza a interface do Admin com proteção contra erros de texto/legenda
+            try:
+                bot.edit_message_caption(caption="❌ O pagamento deste cliente foi recusado.", chat_id=chat_id, message_id=call.message.message_id, reply_markup=None)
+            except Exception:
+                bot.edit_message_reply_markup(chat_id=chat_id, message_id=call.message.message_id, reply_markup=None)
+                bot.send_message(chat_id, "❌ Pagamento recusado.")
+                
+        except Exception as e:
+            bot.send_message(chat_id, f"Erro ao processar recusa. Erro: {e}")
+
+
+# --- 3. RECEBER COMPROVANTE ---
+@bot.message_handler(content_types=['photo'])
+def receber_comprovante(message):
+    chat_id = message.chat.id
+    if chat_id in usuarios_comprando:
+        forma_pagamento = usuarios_comprando[chat_id]
+        markup_admin = InlineKeyboardMarkup()
+        markup_admin.add(
+            InlineKeyboardButton("✅ Aprovar", callback_data=f"aprovar_{chat_id}"),
+            InlineKeyboardButton("❌ Recusar", callback_data=f"recusar_{chat_id}")
+        )
+        bot.send_photo(
+            SEU_ID_TELEGRAM, 
+            message.photo[-1].file_id, 
+            caption=f"🔔 NOVO COMPROVANTE RECEBIDO!\n\nUsuário: @{message.from_user.username} (ID: {chat_id})\nMétodo escolhido: {forma_pagamento}\n\nConfira sua carteira/banco e decida abaixo:", 
+            reply_markup=markup_admin
+        )
+        bot.send_message(chat_id, "⏳ Comprovante recebido! Aguarde a verificação.\n⏳ Receipt received! Please wait for verification.")
+        del usuarios_comprando[chat_id]
+    else:
+        # Extrator automático de File ID caso você envie uma imagem aleatória
+        file_id_exclusivo = message.photo[-1].file_id
+        bot.reply_to(message, f"📸 *File ID reconhecido:*\n\n`{file_id_exclusivo}`", parse_mode="Markdown")
+
+
+# --- 4. ENTREGA VIA STARS ---
+@bot.pre_checkout_query_handler(func=lambda query: True)
+def processar_pre_checkout(pre_checkout_query):
+    bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
+
+@bot.message_handler(content_types=['successful_payment'])
+def pagamento_stars_sucesso(message):
+    chat_id = message.chat.id
+    link_grupo = bot.create_chat_invite_link(ID_GRUPO_VIP, member_limit=1)
+    bot.send_message(chat_id, f"🎉 Thank you for your payment in Stars! Your lifetime access is granted.\n\nClick here to join permanently: {link_grupo.invite_link}")
+
+
+# ==========================================
+# 5. ROTAS DO SERVIDOR WEB (100% AUTOMÁTICO)
+# ==========================================
+@app.route('/' + TOKEN_BOT, methods=['POST'])
+def getMessage():
+    try:
+        json_string = request.get_data().decode('utf-8')
+        update = telebot.types.Update.de_json(json_string)
+        bot.process_new_updates([update])
+        return "!", 200
+    except Exception as server_error:
+        print(f"[ERRO NO SERVIDOR] Falha na rota principal: {server_error}", flush=True)
+        return "Erro", 500
+
+@app.route("/")
+def webhook():
+    bot.remove_webhook()
+    # O Flask descobre o link do Render sozinho! Zero configurações manuais necessárias.
+    url_render = request.url_root.rstrip('/')
+    bot.set_webhook(url=f"{url_render}/{TOKEN_BOT}")
+    return f"Webhook configurado com sucesso para: {url_render}", 200
+
+if __name__ == "__main__":
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host="0.0.0.0", port=port)
