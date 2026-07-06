@@ -10,9 +10,9 @@ TOKEN_BOT = "8713000127:AAGGTcj0wuKqqPzEhfhrWQuDTRWb8Dx3nDw"
 SEU_ID_TELEGRAM = 7665685378
 ID_GRUPO_VIP = -1004452403722
 
-# Deixamos temporariamente vazios para você gerar os novos oficiais enviados diretamente para ESTE bot!
-LINK_BANNER_BOAS_VINDAS = "COLOQUE_O_FILE_ID_DO_BANNER_AQUI"
-LINK_QRCODE_PIX = "COLOQUE_O_FILE_ID_DO_QRCODE_AQUI"
+# Deixamos preenchido temporariamente para o bot iniciar sem dar erro
+LINK_BANNER_BOAS_VINDAS = "AgACAgEAAxkBAAFOValqS0Lwkdjhe4pE9eioLo3Ix9rzdQAC8wtrG1MIWEbYAYELiw9weQEAAwIAA3kAAzYE"
+LINK_QRCODE_PIX = "AgACAgEAAxkBAAFOVbBqS0PSwscNNP18p3ba8LnbAc1gkQAC4QtrG22QWEY81CLHVd7bzAEAAtwIAA3gAAzWE"
 
 # Suas carteiras oficiais configuradas
 CARTEIRA_BTC = "bc1qv0vt52xa356n5sfz6ayq9enfr77teemr4htqtf"
@@ -23,19 +23,15 @@ CARTEIRA_USDT = "0x1e75616b576d7f66f0cd8176ee2f70bef1fe8ddb"
 bot = telebot.TeleBot(TOKEN_BOT, threaded=False)
 app = Flask(__name__)
 
-usuarios_comprando = {}
-
 # ==========================================
-# EXTRAÇÃO AUTOMÁTICA DE FILE ID (Mande as fotos para o bot!)
+# EXTRAÇÃO AUTOMÁTICA DE FILE ID (Mande as fotos para o seu bot NOVO!)
 # ==========================================
 @bot.message_handler(content_types=['photo'])
 def receber_qualquer_foto(message):
-    # Pega o File ID correto gerado por este novo bot
     file_id_gerado = message.photo[-1].file_id
-    
     texto_resposta = (
         f"📸 *Nova imagem detectada pelo seu Bot #2!*\n\n"
-        f"Copie o código abaixo e guarde para colocar nas variáveis:\n\n"
+        f"Copie o código abaixo:\n\n"
         f"`{file_id_gerado}`"
     )
     bot.reply_to(message, texto_resposta, parse_mode="Markdown")
@@ -48,23 +44,35 @@ def enviar_boas_vindas(message):
         markup = InlineKeyboardMarkup(row_width=1)
         
         if idioma_usuario and 'pt' in idioma_usuario:
-            texto = "👋 Bem-vindo ao bot oficial do Criador!\n\nGaranta seu *ACESSO VITALÍCIO* escolhendo sua forma de pagamento:"
-            btn_pix = InlineKeyboardButton("🇧🇷 PIX (R$ 30,00)", callback_data="menu_pix")
-            btn_stars = InlineKeyboardButton("⭐ Telegram Stars (900 Stars)", callback_data="stars_900")
-            btn_crypto = InlineKeyboardButton("🪙 Crypto Dollars ($ 5.00)", callback_data="menu_crypto")
-            markup.add(btn_pix, btn_stars, btn_crypto)
+            texto = "👋 Bem-vindo ao bot oficial!\n\nMande as fotos do Banner e do QR Code aqui no chat para descobrir os novos File IDs."
         else:
-            texto = "👋 Welcome to the Creator's official bot!\n\nGet your *LIFETIME ACCESS* by choosing your payment method:"
-            btn_stars = InlineKeyboardButton("⭐ Telegram Stars (900 Stars)", callback_data="stars_900")
-            btn_crypto = InlineKeyboardButton("🪙 Crypto Dollars ($ 5.00)", callback_data="menu_crypto")
-            btn_pix = InlineKeyboardButton("🇧🇷 Brazilian PIX (R$ 30,00)", callback_data="menu_pix")
-            markup.add(btn_stars, btn_crypto, btn_pix)
-        
-        bot.send_photo(message.chat.id, LINK_BANNER_BOAS_VINDAS, caption=texto, reply_markup=markup, parse_mode="Markdown")
+            texto = "👋 Welcome!\n\nSend the Banner and QR Code images here to discover their new File IDs."
+            
+        bot.send_message(message.chat.id, texto, reply_markup=markup, parse_mode="Markdown")
     except Exception as e:
-        bot.send_message(message.chat.id, f"⚠️ Configurando File IDs... Use os códigos recebidos ao enviar imagens.\n\nTexto alternativo:\n{texto}", reply_markup=markup, parse_mode="Markdown")
+        print(f"Erro no start: {e}", flush=True)
 
-# --- GERENCIAMENTO DOS BOTÕES ---
-@bot.callback_query_handler(func=lambda call: True)
-def escutar_botoes(call):
-    chat_id =
+# ==========================================
+# 5. ROTAS DO SERVIDOR WEB (RENDER)
+# ==========================================
+@app.route('/' + TOKEN_BOT, methods=['POST'])
+def getMessage():
+    try:
+        json_string = request.get_data().decode('utf-8')
+        update = telebot.types.Update.de_json(json_string)
+        bot.process_new_updates([update])
+        return "!", 200
+    except Exception as e:
+        print(f"Erro no webhook: {e}", flush=True)
+        return "Erro", 500
+
+@app.route("/")
+def webhook():
+    bot.remove_webhook()
+    url_render = "https://two-bot3231.onrender.com" 
+    bot.set_webhook(url=f"{url_render}/{TOKEN_BOT}")
+    return "Webhook configurado com sucesso!", 200
+
+if __name__ == "__main__":
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host="0.0.0.0", port=port)
