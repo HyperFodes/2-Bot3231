@@ -10,9 +10,9 @@ TOKEN_BOT = "8713000127:AAGGTcj0wuKqqPzEhfhrWQuDTRWb8Dx3nDw"
 SEU_ID_TELEGRAM = 7665685378
 ID_GRUPO_VIP = -1004452403722
 
-# Deixamos preenchido temporariamente para o bot iniciar sem dar erro
-LINK_BANNER_BOAS_VINDAS = "AgACAgEAAxkBAAFOValqS0Lwkdjhe4pE9eioLo3Ix9rzdQAC8wtrG1MIWEbYAYELiw9weQEAAwIAA3kAAzYE"
-LINK_QRCODE_PIX = "AgACAgEAAxkBAAFOVbBqS0PSwscNNP18p3ba8LnbAc1gkQAC4QtrG22QWEY81CLHVd7bzAEAAtwIAA3gAAzWE"
+# Seus File IDs novos e oficiais coletados agora!
+LINK_BANNER_BOAS_VINDAS = "AgACAgEAAxkBAAMCaktTq1juU69FnvCcIldmmDoSAawAAnEMaxtEBWBGYJ-sXpi_FHkBAAMCAAN5AAM8BA"
+LINK_QRCODE_PIX = "AgACAgEAAxkBAAMPaktXZsBa08xTGOm718m6onZ2gxAAAnIMaxtEBWBGxDZrC-zHMTwBAAMCAAN5AAM8BA"
 
 # Suas carteiras oficiais configuradas
 CARTEIRA_BTC = "bc1qv0vt52xa356n5sfz6ayq9enfr77teemr4htqtf"
@@ -23,34 +23,141 @@ CARTEIRA_USDT = "0x1e75616b576d7f66f0cd8176ee2f70bef1fe8ddb"
 bot = telebot.TeleBot(TOKEN_BOT, threaded=False)
 app = Flask(__name__)
 
-# ==========================================
-# EXTRAÇÃO AUTOMÁTICA DE FILE ID (Mande as fotos para o seu bot NOVO!)
-# ==========================================
-@bot.message_handler(content_types=['photo'])
-def receber_qualquer_foto(message):
-    file_id_gerado = message.photo[-1].file_id
-    texto_resposta = (
-        f"📸 *Nova imagem detectada pelo seu Bot #2!*\n\n"
-        f"Copie o código abaixo:\n\n"
-        f"`{file_id_gerado}`"
-    )
-    bot.reply_to(message, texto_resposta, parse_mode="Markdown")
+# Dicionário para rastrear quem está comprando o quê (Importante para receber o comprovante)
+usuarios_comprando = {}
 
-# --- MENSAGEM DE BOAS VINDAS DO BOT ---
+# ==========================================
+# 2. COMANDOS DO BOT
+# ==========================================
+
+# --- MENSAGEM DE BOAS VINDAS COM BANNER BILÍNGUE (/start) ---
 @bot.message_handler(commands=['start'])
 def enviar_boas_vindas(message):
     try:
+        print("[BOT] 📥 Comando /start entrou na função com sucesso!", flush=True)
         idioma_usuario = message.from_user.language_code
         markup = InlineKeyboardMarkup(row_width=1)
         
         if idioma_usuario and 'pt' in idioma_usuario:
-            texto = "👋 Bem-vindo ao bot oficial!\n\nMande as fotos do Banner e do QR Code aqui no chat para descobrir os novos File IDs."
+            texto = "👋 Bem-vindo ao bot oficial do Criador!\n\nGaranta seu *ACESSO VITALÍCIO* (pague uma vez e fique para sempre) aos melhores conteúdos e arquivos de Minecraft escolhendo sua forma de pagamento:"
+            btn_pix = InlineKeyboardButton("🇧🇷 PIX (R$ 30,00)", callback_data="menu_pix")
+            btn_stars = InlineKeyboardButton("⭐ Telegram Stars (900 Stars)", callback_data="stars_900")
+            btn_crypto = InlineKeyboardButton("🪙 Crypto Dollars ($ 5.00)", callback_data="menu_crypto")
+            markup.add(btn_pix, btn_stars, btn_crypto)
         else:
-            texto = "👋 Welcome!\n\nSend the Banner and QR Code images here to discover their new File IDs."
-            
-        bot.send_message(message.chat.id, texto, reply_markup=markup, parse_mode="Markdown")
+            texto = "👋 Welcome to the Creator's official bot!\n\nGet your *LIFETIME ACCESS* (pay once, stay forever) to the best Minecraft content and files by choosing your payment method:"
+            btn_stars = InlineKeyboardButton("⭐ Telegram Stars (900 Stars)", callback_data="stars_900")
+            btn_crypto = InlineKeyboardButton("🪙 Crypto Dollars ($ 5.00)", callback_data="menu_crypto")
+            btn_pix = InlineKeyboardButton("🇧🇷 Brazilian PIX (R$ 30,00)", callback_data="menu_pix")
+            markup.add(btn_stars, btn_crypto, btn_pix)
+        
+        bot.send_photo(message.chat.id, LINK_BANNER_BOAS_VINDAS, caption=texto, reply_markup=markup, parse_mode="Markdown")
+        print("[BOT] ✅ Foto enviada com sucesso!", flush=True)
+        
     except Exception as e:
-        print(f"Erro no start: {e}", flush=True)
+        print(f"[ERRO NO START] ❌ Falha ao enviar foto. Enviando texto. Erro: {e}", flush=True)
+        bot.send_message(message.chat.id, texto, reply_markup=markup, parse_mode="Markdown")
+
+
+# --- GERENCIAMENTO DOS CLIQUES NOS BOTÕES ---
+@bot.callback_query_handler(func=lambda call: True)
+def escutar_botoes(call):
+    chat_id = call.message.chat.id
+
+    if call.data == "menu_pix":
+        usuarios_comprando[chat_id] = "PIX - R$ 30"
+        texto_instrucao = (
+            f"⚡ *Plano Vitalício de R$ 30 selecionado!*\n\n"
+            f"1️⃣ Escaneie o QR Code acima no app do seu banco.\n"
+            f"2️⃣ *ATENÇÃO:* Digite manualmente o valor exato de: *R$ 30,00*\n\n"
+            f"⚠️ *Se você digitar um valor diferente, seu acesso não será aprovado.*\n\n"
+            f"👇 Após fazer o pagamento, envie a *FOTO DO COMPROVANTE* aqui no chat para liberação imediata!\n\n"
+            f"ℹ️ Precisa de ajuda? Fale com o suporte: @HardHandsG"
+        )
+        try:
+            bot.send_photo(chat_id, LINK_QRCODE_PIX, caption=texto_instrucao, parse_mode="Markdown")
+        except Exception as e:
+            print(f"[ERRO NO PIX] ❌ Falha ao enviar QR Code. Erro: {e}", flush=True)
+            bot.send_message(chat_id, texto_instrucao, parse_mode="Markdown")
+
+    elif call.data == "stars_900":
+        bot.send_invoice(
+            chat_id=chat_id,
+            title="Lifetime VIP — 900 Stars",
+            description="Permanent access to the Creator's Minecraft VIP group.",
+            invoice_payload="vip_stars_900",
+            provider_token="",
+            currency="XTR",
+            prices=[LabeledPrice(label="Stars", amount=900)]
+        )
+
+    elif call.data == "menu_crypto":
+        usuarios_comprando[chat_id] = "Crypto - $ 5.00"
+        texto_crypto = (
+            f"🪙 *Lifetime VIP Access — Crypto Dollars*\n\n"
+            f"Value: *$ 5.00 USD*\n\n"
+            f"Send the exact amount to one of the wallets below (tap to copy):\n\n"
+            f"🔹 *USDT (Network: BEP-20 / BSC):*\n`{CARTEIRA_USDT}`\n\n"
+            f"🔸 *LTC (Litecoin - Recommended/Low Fees):*\n`{CARTEIRA_LTC}`\n\n"
+            f"🔹 *BTC (Bitcoin):*\n`{CARTEIRA_BTC}`\n\n"
+            f"🔸 *ETH (Ethereum):*\n`{CARTEIRA_ETH}`\n\n"
+            f"👇 After sending the payment, please upload the *TRANSACTION RECEIPT/SCREENSHOT* here for manual approval!\n\n"
+            f"ℹ️ Need help? Contact support: @HardHandsG"
+        )
+        bot.send_message(chat_id, texto_crypto, parse_mode="Markdown")
+
+    elif call.data.startswith("aprovar_"):
+        bot.answer_callback_query(call.id) # Evita spam de repetição do clique
+        id_cliente = call.data.split("_")[1]
+        try:
+            link_grupo = bot.create_chat_invite_link(ID_GRUPO_VIP, member_limit=1)
+            bot.send_message(id_cliente, f"✅ Seu pagamento foi aprovado! / Your payment has been approved!\n\nClique no link abaixo para entrar no grupo VIP permanentemente:\nClick the link below to join the VIP group permanently:\n\n{link_grupo.invite_link}")
+            bot.edit_message_caption("✅ Cliente aprovado e link permanente enviado!", chat_id=chat_id, message_id=call.message.message_id)
+        except Exception as e:
+            bot.send_message(chat_id, f"Erro ao gerar link. Verifique se o bot é admin do grupo. Erro: {e}")
+
+    elif call.data.startswith("recusar_"):
+        bot.answer_callback_query(call.id) # Evita spam de repetição do clique
+        id_cliente = call.data.split("_")[1]
+        try:
+            bot.send_message(id_cliente, "❌ Pagamento recusado / Payment declined.\nSe achar que foi um erro, entre em contato com o suporte: @HardHandsG")
+            bot.edit_message_caption("❌ Pagamento recusado.", chat_id=chat_id, message_id=call.message.message_id)
+        except Exception as e:
+            bot.send_message(chat_id, f"Erro ao processar recusa. Erro: {e}")
+
+
+# --- 3. RECEBER COMPROVANTE ---
+@bot.message_handler(content_types=['photo'])
+def receber_comprovante(message):
+    chat_id = message.chat.id
+    if chat_id in usuarios_comprando:
+        forma_pagamento = usuarios_comprando[chat_id]
+        markup_admin = InlineKeyboardMarkup()
+        markup_admin.add(
+            InlineKeyboardButton("✅ Aprovar", callback_data=f"aprovar_{chat_id}"),
+            InlineKeyboardButton("❌ Recusar", callback_data=f"recusar_{chat_id}")
+        )
+        bot.send_photo(
+            SEU_ID_TELEGRAM, 
+            message.photo[-1].file_id, 
+            caption=f"🔔 NOVO COMPROVANTE RECEBIDO!\n\nUsuário: @{message.from_user.username} (ID: {chat_id})\nMétodo escolhido: {forma_pagamento}\n\nConfira sua carteira/banco e decida abaixo:", 
+            reply_markup=markup_admin
+        )
+        bot.send_message(chat_id, "⏳ Comprovante recebido! Aguarde a verificação.\n⏳ Receipt received! Please wait for verification.")
+        del usuarios_comprando[chat_id]
+
+
+# --- 4. ENTREGA VIA STARS ---
+@bot.pre_checkout_query_handler(func=lambda query: True)
+def processar_pre_checkout(pre_checkout_query):
+    bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
+
+@bot.message_handler(content_types=['successful_payment'])
+def pagamento_stars_sucesso(message):
+    chat_id = message.chat.id
+    link_grupo = bot.create_chat_invite_link(ID_GRUPO_VIP, member_limit=1)
+    bot.send_message(chat_id, f"🎉 Thank you for your payment in Stars! Your lifetime access is granted.\n\nClick here to join permanently: {link_grupo.invite_link}")
+
 
 # ==========================================
 # 5. ROTAS DO SERVIDOR WEB (RENDER)
@@ -62,14 +169,17 @@ def getMessage():
         update = telebot.types.Update.de_json(json_string)
         bot.process_new_updates([update])
         return "!", 200
-    except Exception as e:
-        print(f"Erro no webhook: {e}", flush=True)
+    except Exception as server_error:
+        print(f"[ERRO NO SERVIDOR] ❌ Falha na rota principal: {server_error}", flush=True)
         return "Erro", 500
 
 @app.route("/")
 def webhook():
     bot.remove_webhook()
+    
+    # Seu link oficial configurado perfeitamente:
     url_render = "https://two-bot3231.onrender.com" 
+    
     bot.set_webhook(url=f"{url_render}/{TOKEN_BOT}")
     return "Webhook configurado com sucesso!", 200
 
