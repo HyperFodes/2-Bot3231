@@ -41,13 +41,11 @@ def enviar_boas_vindas(message):
         if idioma_usuario and 'pt' in idioma_usuario:
             texto = "👋 Bem-vindo ao bot oficial do Criador!\n\nGaranta seu *ACESSO VITALÍCIO* (pague uma vez e fique para sempre) aos melhores conteúdos e arquivos de Minecraft escolhendo sua forma de pagamento:"
             btn_pix = InlineKeyboardButton("🇧🇷 PIX (R$ 30,00)", callback_data="menu_pix")
-            # 🔄 Alterado temporariamente de 900 para 850 Stars no menu em português
             btn_stars = InlineKeyboardButton("⭐ Telegram Stars (850 Stars)", callback_data="stars_850")
             btn_crypto = InlineKeyboardButton("🪙 Crypto Dollars ($ 5.00)", callback_data="menu_crypto")
             markup.add(btn_pix, btn_stars, btn_crypto)
         else:
             texto = "👋 Welcome to the Creator's official bot!\n\nGet your *LIFETIME ACCESS* (pay once, stay forever) to the best Minecraft content and files by choosing your payment method:"
-            # 🔄 Alterado temporariamente de 900 para 850 Stars no menu em inglês
             btn_stars = InlineKeyboardButton("⭐ Telegram Stars (850 Stars)", callback_data="stars_850")
             btn_crypto = InlineKeyboardButton("🪙 Crypto Dollars ($ 5.00)", callback_data="menu_crypto")
             btn_pix = InlineKeyboardButton("🇧🇷 Brazilian PIX (R$ 30,00)", callback_data="menu_pix")
@@ -83,7 +81,6 @@ def escutar_botoes(call):
             bot.send_message(chat_id, texto_instrucao, parse_mode="Markdown")
 
     elif call.data == "stars_850":
-        # 🔄 Cobrança alterada oficialmente para 850 Stars
         bot.send_invoice(
             chat_id=chat_id,
             title="Lifetime VIP — 850 Stars",
@@ -158,13 +155,8 @@ def processar_pre_checkout(pre_checkout_query):
 @bot.message_handler(content_types=['successful_payment'])
 def pagamento_stars_sucesso(message):
     chat_id = message.chat.id
-    try:
-        link_grupo = bot.create_chat_invite_link(ID_GRUPO_VIP, member_limit=1)
-        bot.send_message(chat_id, f"🎉 Thank you for your payment in Stars! Your lifetime access is granted.\n\nClick here to join permanently: {link_grupo.invite_link}")
-    except Exception as e:
-        # Fallback de segurança caso dê erro no link do grupo, para garantir que as Stars entrem sem travar o webhook
-        print(f"[STARS] Erro ao gerar link do VIP: {e}", flush=True)
-        bot.send_message(chat_id, "🎉 Payment received! Please contact our support to get your VIP link: @HardHandsG")
+    link_grupo = bot.create_chat_invite_link(ID_GRUPO_VIP, member_limit=1)
+    bot.send_message(chat_id, f"🎉 Thank you for your payment in Stars! Your lifetime access is granted.\n\nClick here to join permanently: {link_grupo.invite_link}")
 
 
 # ==========================================
@@ -178,8 +170,7 @@ def getMessage():
         bot.process_new_updates([update])
         return "!", 200
     except Exception as server_error:
-        # Adicionado o print completo com o erro para ajudar o "Modo Detetive" no Render se der problema
-        print(f"❌ [ERRO CRÍTICO NO WEBHOOK] ❌: {server_error}", flush=True)
+        print(f"[ERRO NO SERVIDOR] ❌ Falha na rota principal: {server_error}", flush=True)
         return "Erro", 500
 
 @app.route("/")
