@@ -41,12 +41,12 @@ def enviar_boas_vindas(message):
         if idioma_usuario and 'pt' in idioma_usuario:
             texto = "👋 Bem-vindo ao bot oficial do Criador!\n\nGaranta seu *ACESSO VITALÍCIO* (pague uma vez e fique para sempre) aos melhores conteúdos e arquivos de Minecraft escolhendo sua forma de pagamento:"
             btn_pix = InlineKeyboardButton("🇧🇷 PIX (R$ 30,00)", callback_data="menu_pix")
-            btn_stars = InlineKeyboardButton("⭐ Telegram Stars (850 Stars)", callback_data="stars_850")
+            btn_stars = InlineKeyboardButton("⭐ Telegram Stars (900 Stars)", callback_data="stars_900")
             btn_crypto = InlineKeyboardButton("🪙 Crypto Dollars ($ 5.00)", callback_data="menu_crypto")
             markup.add(btn_pix, btn_stars, btn_crypto)
         else:
             texto = "👋 Welcome to the Creator's official bot!\n\nGet your *LIFETIME ACCESS* (pay once, stay forever) to the best Minecraft content and files by choosing your payment method:"
-            btn_stars = InlineKeyboardButton("⭐ Telegram Stars (850 Stars)", callback_data="stars_850")
+            btn_stars = InlineKeyboardButton("⭐ Telegram Stars (900 Stars)", callback_data="stars_900")
             btn_crypto = InlineKeyboardButton("🪙 Crypto Dollars ($ 5.00)", callback_data="menu_crypto")
             btn_pix = InlineKeyboardButton("🇧🇷 Brazilian PIX (R$ 30,00)", callback_data="menu_pix")
             markup.add(btn_stars, btn_crypto, btn_pix)
@@ -80,15 +80,15 @@ def escutar_botoes(call):
             print(f"[ERRO NO PIX] ❌ Falha ao enviar QR Code. Erro: {e}", flush=True)
             bot.send_message(chat_id, texto_instrucao, parse_mode="Markdown")
 
-    elif call.data == "stars_850":
+    elif call.data == "stars_900":
         bot.send_invoice(
             chat_id=chat_id,
-            title="Lifetime VIP — 850 Stars",
+            title="Lifetime VIP — 900 Stars",
             description="Permanent access to the Creator's Minecraft VIP group.",
-            invoice_payload="vip_stars_850",
+            invoice_payload="vip_stars_900",
             provider_token="",
             currency="XTR",
-            prices=[LabeledPrice(label="Stars", amount=850)]
+            prices=[LabeledPrice(label="Stars", amount=900)]
         )
 
     elif call.data == "menu_crypto":
